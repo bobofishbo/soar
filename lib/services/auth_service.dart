@@ -21,7 +21,14 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await supabase.auth.signOut();
+    try {
+      print('AuthService: Starting sign out...');
+      await supabase.auth.signOut(scope: SignOutScope.global);
+      print('AuthService: Sign out completed');
+    } catch (e) {
+      print('AuthService: Sign out error: $e');
+      rethrow;
+    }
   }
 
   Session? get currentSession => supabase.auth.currentSession;

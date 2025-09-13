@@ -28,13 +28,49 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _signOut() async {
+    // Show confirmation dialog
+    final shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSignOut != true) return;
+
     try {
+      print('Attempting to sign out...');
       await _authService.signOut();
-      // Navigation will be handled automatically by AuthWrapper
+      print('Sign out successful');
+      
+      // Small delay to ensure the auth state change is processed
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      // The AuthWrapper should automatically handle navigation
+      // but we can also manually check if we're still on this page
+      if (mounted) {
+        print('Still mounted after sign out, checking auth state...');
+      }
     } catch (e) {
+      print('Sign out error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error signing out: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error signing out: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

@@ -32,20 +32,44 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  final UserService _userService = UserService();
+  String? _lastSessionId;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
         final session = snapshot.hasData ? snapshot.data!.session : null;
+        final currentSessionId = session?.accessToken;
+        
+        // Check if session has changed
+        if (_lastSessionId != currentSessionId) {
+          _lastSessionId = currentSessionId;
+          print('Session changed: ${currentSessionId != null ? 'logged in' : 'logged out'}');
+        }
         
         if (session != null) {
+          print('User is authenticated, checking profile...');
           // User is authenticated, check if they have completed onboarding
           return FutureBuilder<UserProfile?>(
-            future: UserService().getCurrentUserProfile(),
+            // Use session ID as key to force rebuild when session changes
+            key: ValueKey(currentSessionId),
+            future: _userService.getCurrentUserProfile(),
             builder: (context, profileSnapshot) {
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
@@ -56,6 +80,7 @@ class AuthWrapper extends StatelessWidget {
               }
               
               if (profileSnapshot.hasError) {
+                print('Profile fetch error: ${profileSnapshot.error}');
                 return Scaffold(
                   body: Center(
                     child: Column(
@@ -67,8 +92,7 @@ class AuthWrapper extends StatelessWidget {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () {
-                            // Force rebuild by creating a new AuthWrapper
-                            Navigator.pushReplacementNamed(context, '/');
+                            setState(() {}); // Force rebuild
                           },
                           child: const Text('Retry'),
                         ),
@@ -80,15 +104,19 @@ class AuthWrapper extends StatelessWidget {
               
               final userProfile = profileSnapshot.data;
               if (userProfile == null) {
+                print('No profile found, showing onboarding');
                 // User is authenticated but hasn't completed onboarding
                 return const OnboardingPage();
               } else {
+                print('Profile found, showing home page');
                 // User is authenticated and has completed onboarding
                 return const HomePage();
               }
             },
           );
         } else {
+          print('No session found, showing login page');
+          // No session - user is not authenticated
           return const LoginPage();
         }
       },

@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'routes/app_router.dart';
 import 'screens/login_page.dart';
 import 'screens/home_page.dart';
+import 'screens/onboarding_page.dart';
 import 'supabase/supabase_config.dart';
+import 'services/user_service.dart';
 
 Future<void> main() async {
   // Ensures Flutter engine is initialized
@@ -41,7 +43,51 @@ class AuthWrapper extends StatelessWidget {
         final session = snapshot.hasData ? snapshot.data!.session : null;
         
         if (session != null) {
-          return const HomePage();
+          // User is authenticated, check if they have completed onboarding
+          return FutureBuilder<UserProfile?>(
+            future: UserService().getCurrentUserProfile(),
+            builder: (context, profileSnapshot) {
+              if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              
+              if (profileSnapshot.hasError) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error: ${profileSnapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Force rebuild by creating a new AuthWrapper
+                            Navigator.pushReplacementNamed(context, '/');
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              
+              final userProfile = profileSnapshot.data;
+              if (userProfile == null) {
+                // User is authenticated but hasn't completed onboarding
+                return const OnboardingPage();
+              } else {
+                // User is authenticated and has completed onboarding
+                return const HomePage();
+              }
+            },
+          );
         } else {
           return const LoginPage();
         }

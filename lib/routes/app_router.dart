@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/login_page.dart';
 import '../screens/home_page.dart';
+import '../screens/onboarding_page.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -9,6 +10,8 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const LoginPage());
       case '/home':
         return MaterialPageRoute(builder: (_) => const HomePage());
+      case '/onboarding':
+        return MaterialPageRoute(builder: (_) => const OnboardingPage());
       case '/store':
         return MaterialPageRoute(
           builder: (_) => Scaffold(
